@@ -8,6 +8,8 @@
   2. Time Decomposition
   3. AR
   4. Combined
+  
+- Original data cannot be provided because of confidentiality agreement with data provider
 
 
 
