@@ -1,0 +1,293 @@
+--------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  U:\ECO392\Memos\Final_Memo\final_memo.log
+  log type:  text
+ opened on:   3 Dec 2017, 17:41:46
+
+. 
+. use "project_data"
+
+. 
+. /*rename date date_bad
+> gen date = date_bad(date_bad, "YM")
+> format date %tq
+> tsset date*/
+. 
+. drop E F G H I J K L M N date
+
+. 
+. gen date = ym(year,month)
+
+. format date %tm
+
+. order date sales
+
+. 
+. tsset date
+        time variable:  date, 2011m1 to 2015m12
+                delta:  1 month
+
+. 
+. tsappend, add(6)
+
+. gen t=_n
+
+. 
+. replace month=1 if date==m(2016m1)
+(1 real change made)
+
+. replace month=2 if date==m(2016m2)
+(1 real change made)
+
+. replace month=3 if date==m(2016m3)
+(1 real change made)
+
+. replace month=4 if date==m(2016m4)
+(1 real change made)
+
+. replace month=5 if date==m(2016m5)
+(1 real change made)
+
+. replace month=6 if date==m(2016m6)
+(1 real change made)
+
+. 
+. 
+. 
+. 
+. /*What does data look like*/
+. tsline sales
+
+. /*Data looks seasonal*/
+. /*Will try Winters Smoother, AR, and Time
+> Series Decomposition*/
+. ******************************************************************************
+> ***************************
+. /*Time Decomposition*/
+. /*Step 1: Deseasonalize Data*/
+. tssmooth ma ma=sales, window(6,1,5)
+The smoother applied was
+     (1/12)*[x(t-6) + x(t-5) + x(t-4) + x(t-3) + x(t-2) + x(t-1) + 1*x(t) +
+     x(t+1) + x(t+2) + x(t+3) + x(t+4) + ...; x(t)= sales
+
+. 
+. replace ma=. if date>m(2015m7) /*correcting stata trying to fill in gaps*/
+(11 real changes made, 11 to missing)
+
+. replace ma=. if date<m(2011m7) /*correcting stata trying to fill in gaps*/
+(6 real changes made, 6 to missing)
+
+. 
+. /*Centered moving average*/
+. tssmooth ma cma = ma, window(0,1,1)
+The smoother applied was
+     (1/2)*[1*x(t) + x(t+1)]; x(t)= ma
+
+. 
+. replace cma=. if date==m(2015m7)
+(1 real change made, 1 to missing)
+
+. replace cma=. if date==m(2011m6)
+(1 real change made, 1 to missing)
+
+. 
+. /*Creating sf's*/
+. gen sf=sales/cma
+(18 missing values generated)
+
+. 
+. list sf
+
+     +----------+
+     |       sf |
+     |----------|
+  1. |        . |
+  2. |        . |
+  3. |        . |
+  4. |        . |
+  5. |        . |
+     |----------|
+  6. |        . |
+  7. | 1.218449 |
+  8. | .6812215 |
+  9. | 1.616224 |
+ 10. |  .978039 |
+     |----------|
+ 11. | 1.014619 |
+ 12. | .7976035 |
+ 13. | .4832866 |
+ 14. | 1.272008 |
+ 15. | 1.511706 |
+     |----------|
+ 16. | 1.006541 |
+ 17. | .5727371 |
+ 18. | .4594513 |
+ 19. | 1.389747 |
+ 20. | .8536432 |
+     |----------|
+ 21. | 1.097159 |
+ 22. | 1.043563 |
+ 23. |  1.19514 |
+ 24. | 1.094333 |
+ 25. |  .816341 |
+     |----------|
+ 26. | 1.031669 |
+ 27. | 1.537545 |
+ 28. | .9119573 |
+ 29. | .8292238 |
+ 30. | .6488807 |
+     |----------|
+ 31. | .5486574 |
+ 32. | 1.588511 |
+ 33. |  1.23457 |
+ 34. | .7821768 |
+ 35. | .9400218 |
+     |----------|
+ 36. | 1.072062 |
+ 37. | .5739375 |
+ 38. | .8509701 |
+ 39. | 1.927955 |
+ 40. | 1.055598 |
+     |----------|
+ 41. | .8506783 |
+ 42. | .6709771 |
+ 43. |  .790533 |
+ 44. | 1.002623 |
+ 45. | 1.422485 |
+     |----------|
+ 46. | .9982517 |
+ 47. | .7403992 |
+ 48. | .9421588 |
+ 49. | .6643115 |
+ 50. |  1.24092 |
+     |----------|
+ 51. | 1.813155 |
+ 52. | .8664352 |
+ 53. | .6268461 |
+ 54. |  .530366 |
+ 55. |        . |
+     |----------|
+ 56. |        . |
+ 57. |        . |
+ 58. |        . |
+ 59. |        . |
+ 60. |        . |
+     |----------|
+ 61. |        . |
+ 62. |        . |
+ 63. |        . |
+ 64. |        . |
+ 65. |        . |
+     |----------|
+ 66. |        . |
+     +----------+
+
+. 
+. tsline sf
+
+. 
+. /*Making S values*/
+. sort month
+
+. by month: egen S=mean(sf)
+
+. sort date
+
+. 
+. tab S
+
+          S |      Freq.     Percent        Cum.
+------------+-----------------------------------
+   .5774188 |          6        9.09        9.09
+   .6344692 |          6        9.09       18.18
+   .7198713 |          6        9.09       27.27
+   .9505078 |          5        7.58       34.85
+   .9601329 |          6        9.09       43.94
+   .9725448 |          5        7.58       51.52
+   .9765391 |          5        7.58       59.09
+   .9868466 |          5        7.58       66.67
+     1.0315 |          5        7.58       74.24
+   1.098892 |          6        9.09       83.33
+    1.34261 |          5        7.58       90.91
+    1.69759 |          6        9.09      100.00
+------------+-----------------------------------
+      Total |         66      100.00
+
+. 
+. 
+. 
+. /*Step 2: Making trend estimates*/
+. reg cma t
+
+      Source |       SS           df       MS      Number of obs   =        48
+-------------+----------------------------------   F(1, 46)        =      1.12
+       Model |   335268.01         1   335268.01   Prob > F        =    0.2946
+    Residual |  13718807.5        46  298234.947   R-squared       =    0.0239
+-------------+----------------------------------   Adj R-squared   =    0.0026
+       Total |  14054075.6        47  299022.884   Root MSE        =    546.11
+
+------------------------------------------------------------------------------
+         cma |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+           t |  -6.032802   5.689869    -1.06   0.295    -17.48592    5.420311
+       _cons |   14919.26   190.6035    78.27   0.000      14535.6    15302.93
+------------------------------------------------------------------------------
+
+. predict T
+(option xb assumed; fitted values)
+
+. 
+. /*Step 3: Making Cf's*/
+. gen cf=cma/T
+(18 missing values generated)
+
+. 
+. tsline cf
+
+. 
+. /*Finding C*/
+. /*What should I use to forecast cf's?*/
+. /*appears to be an upward trend, going to use holts*/
+. tssmooth hwinters C_holt=cf, forecast(12)
+computing optimal weights
+
+Iteration 0:   penalized RSS = -.02437506  
+Iteration 1:   penalized RSS = -.01533139  (not concave)
+Iteration 2:   penalized RSS = -.01515783  (not concave)
+Iteration 3:   penalized RSS = -.01510782  
+Iteration 4:   penalized RSS =  -.0151078  
+
+Optimal weights:
+                             alpha = 1.0000
+                              beta = 0.0237
+penalized sum-of-squared residuals = .0151078 
+          sum-of-squared residuals = .0151078 
+           root mean squared error = .0177411 
+
+. list date C_holt if date>m(2015m12)
+
+     +-------------------+
+     |   date     C_holt |
+     |-------------------|
+ 61. | 2016m1   1.048689 |
+ 62. | 2016m2   1.051614 |
+ 63. | 2016m3   1.054538 |
+ 64. | 2016m4   1.057463 |
+ 65. | 2016m5   1.060388 |
+     |-------------------|
+ 66. | 2016m6   1.063313 |
+     +-------------------+
+
+. 
+. gen holt_present= C_holt if date>m(2015m6)
+(54 missing values generated)
+
+. 
+. tsline cf holt_present
+
+. 
+end of do-file
+
+. graph save Graph "U:\ECO392\Memos\Final_Memo\Figures\figure6use.gph"
+(file U:\ECO392\Memos\Final_Memo\Figures\figure6use.gph saved)
+exit, clear
